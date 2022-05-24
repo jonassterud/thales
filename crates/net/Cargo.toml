@@ -1,0 +1,10 @@
+[package]
+name = "net"
+version = "0.1.0"
+authors = ["Jonas Mathisrud Sterud <jonas.sterud@gmail.com>"]
+description = "BitTorrent client, written in Rust 🦀"
+repository = "https://github.com/jonassterud/thales"
+license = "MIT"
+edition = "2021"
+
+[dependencies]
