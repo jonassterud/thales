@@ -1,4 +1,4 @@
-![thales](media/logo/cover.png)
+![thales](assets/logo/cover.png)
 
 ## About
 *thales* is a BitTorrent client.
