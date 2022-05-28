@@ -1,5 +1,5 @@
 [package]
-name = "bcode"
+name = "bencode"
 version = "0.1.0"
 authors = ["Jonas Mathisrud Sterud <jonas.sterud@gmail.com>"]
 description = "BitTorrent client, written in Rust 🦀"
