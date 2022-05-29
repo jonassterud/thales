@@ -4,3 +4,4 @@ mod tests;
 mod bval;
 
 pub use decode::decode;
+pub use encode::encode;

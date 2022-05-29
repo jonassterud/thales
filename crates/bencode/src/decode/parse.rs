@@ -57,10 +57,9 @@ pub fn integer(content: &mut Peekable<Iter<u8>>) -> BVal {
         }
     }
 
-    int = int_temp.iter().collect::<String>().parse::<i64>().unwrap();
-    
-    BVal::Number(int)
+    int = int_temp.iter().collect::<String>().parse::<i64>().expect(&format!("{:?}___{:?}", content, int_temp));
 
+    BVal::Number(int)
 }
 
 /// Decode bencoded byte string.
