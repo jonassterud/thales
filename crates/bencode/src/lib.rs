@@ -1,6 +1,6 @@
 mod decode;
 mod encode;
 mod tests;
-mod val;
+mod bval;
 
 pub use decode::decode;
