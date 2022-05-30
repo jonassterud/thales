@@ -2,13 +2,13 @@ use std::collections::BTreeMap;
 
 /// Enum to represent Bencoded data values.
 #[derive(Debug, PartialEq)]
-pub enum BVal {
+pub enum Val {
     /// Integer
     Number(i64),
     /// Byte string
     ByteString(Vec<u8>),
     /// List of values
-    List(Vec<BVal>),
+    List(Vec<Val>),
     /// Dictionary of values
-    Dictionary(BTreeMap<Vec<u8>, BVal>),
+    Dictionary(BTreeMap<Vec<u8>, Val>),
 }

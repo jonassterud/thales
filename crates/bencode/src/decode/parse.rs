@@ -1,14 +1,14 @@
-use super::BVal;
+use super::Val;
 use std::collections::BTreeMap;
 use std::iter::Peekable;
 use std::slice::Iter;
 
 /// Figures out what the bencoded data is, and calls the appropriate decode function.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `content` - data to decode
-pub fn any(content: &mut Peekable<Iter<u8>>) -> Option<BVal> {
+pub fn any(content: &mut Peekable<Iter<u8>>) -> Option<Val> {
     while let Some(byte) = content.peek() {
         match byte {
             105 => return Some(integer(content)),
@@ -23,11 +23,11 @@ pub fn any(content: &mut Peekable<Iter<u8>>) -> Option<BVal> {
 }
 
 /// Decode bencoded integer.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `content` - data to decode
-pub fn integer(content: &mut Peekable<Iter<u8>>) -> BVal {
+pub fn integer(content: &mut Peekable<Iter<u8>>) -> Val {
     if **content.peek().unwrap() != 105 {
         panic!("missing 'i'");
     } else {
@@ -36,7 +36,7 @@ pub fn integer(content: &mut Peekable<Iter<u8>>) -> BVal {
 
     let mut int_temp: Vec<char> = vec![];
     let int: i64;
-    
+
     while let Some(byte) = content.peek() {
         match byte {
             45 /* - */ => {
@@ -57,21 +57,25 @@ pub fn integer(content: &mut Peekable<Iter<u8>>) -> BVal {
         }
     }
 
-    int = int_temp.iter().collect::<String>().parse::<i64>().expect(&format!("{:?}___{:?}", content, int_temp));
+    int = int_temp
+        .iter()
+        .collect::<String>()
+        .parse::<i64>()
+        .expect(&format!("{:?}___{:?}", content, int_temp));
 
-    BVal::Number(int)
+    Val::Number(int)
 }
 
 /// Decode bencoded byte string.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `content` - data to decode
-pub fn byte_string(content: &mut Peekable<Iter<u8>>) -> BVal {
+pub fn byte_string(content: &mut Peekable<Iter<u8>>) -> Val {
     let mut bs_len_temp: Vec<char> = vec![];
     let mut bs_len: i64 = 0;
     let mut bs: Vec<u8> = vec![];
-   
+
     while let Some(byte) = content.peek() {
         match byte {
             48..=57 /* 0-9 */ => {
@@ -83,61 +87,69 @@ pub fn byte_string(content: &mut Peekable<Iter<u8>>) -> BVal {
                 break;
             },
             _ => panic!("unexpected byte"),
-        };   
+        };
     }
 
     for _ in 0..bs_len {
         bs.push(*content.next().unwrap());
     }
 
-    BVal::ByteString(bs)
+    Val::ByteString(bs)
 }
 
 /// Decode bencoded list.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `content` - data to decode
-pub fn list(content: &mut Peekable<Iter<u8>>) -> BVal {
-    let mut list: Vec<BVal> = vec![];
+pub fn list(content: &mut Peekable<Iter<u8>>) -> Val {
+    let mut list: Vec<Val> = vec![];
 
-    if **content.peek().unwrap() != 108 /* l */ {
+    if **content.peek().unwrap() != 108
+    /* l */
+    {
         panic!("missing 'l'");
     } else {
         content.next();
     }
 
-    while **content.peek().unwrap() != 101 /* e */ {
+    while **content.peek().unwrap() != 101
+    /* e */
+    {
         list.push(any(content).unwrap());
     }
 
-    BVal::List(list)
+    Val::List(list)
 }
 
 /// Decode bencoded dictionary.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `content` - data to decode
-pub fn dictionary(content: &mut Peekable<Iter<u8>>) -> BVal {
-    let mut dict: BTreeMap<Vec<u8>, BVal> = BTreeMap::new();
+pub fn dictionary(content: &mut Peekable<Iter<u8>>) -> Val {
+    let mut dict: BTreeMap<Vec<u8>, Val> = BTreeMap::new();
 
-    if **content.peek().unwrap() != 100 /* d */ {
+    if **content.peek().unwrap() != 100
+    /* d */
+    {
         panic!("missing 'd'");
     } else {
         content.next();
     }
 
-    while **content.peek().unwrap() != 101 /* e */ {
+    while **content.peek().unwrap() != 101
+    /* e */
+    {
         let key_temp = any(content).unwrap();
 
-        if let BVal::ByteString(key) = key_temp {
-            let BValue = any(content).unwrap();
-            dict.insert(key, BValue);
+        if let Val::ByteString(key) = key_temp {
+            let val = any(content).unwrap();
+            dict.insert(key, val);
         } else {
             panic!("key is not a byte string")
         }
     }
 
-    BVal::Dictionary(dict)
+    Val::Dictionary(dict)
 }

@@ -1,12 +1,12 @@
 mod parse;
 
-use crate::bval::BVal;
+use crate::val::Val;
 
 /// Encode data to bencode.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `content` - data to encode
-pub fn encode(content: &BVal) -> Vec<u8> {
+pub fn encode(content: &Val) -> Vec<u8> {
     parse::any(content)
 }

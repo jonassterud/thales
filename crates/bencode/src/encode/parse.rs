@@ -1,24 +1,24 @@
-use super::BVal;
+use super::Val;
 use std::collections::BTreeMap;
 
 /// Encodes value as bencode.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `content` - data to encode
-pub fn any(content: &BVal) -> Vec<u8> {
+pub fn any(content: &Val) -> Vec<u8> {
     match content {
-        BVal::Number(inner) => integer(inner),
-        BVal::ByteString(inner) => byte_string(inner),
-        BVal::List(inner) => list(inner),
-        BVal::Dictionary(inner) => dictionary(inner),
+        Val::Number(inner) => integer(inner),
+        Val::ByteString(inner) => byte_string(inner),
+        Val::List(inner) => list(inner),
+        Val::Dictionary(inner) => dictionary(inner),
     }
 }
 
 /// Encodes number.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `content` - number to encode
 pub fn integer(content: &i64) -> Vec<u8> {
     let out = format!("i{}e", content.to_string());
@@ -27,9 +27,9 @@ pub fn integer(content: &i64) -> Vec<u8> {
 }
 
 /// Encodes byte string.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `content` - byte string to encode
 pub fn byte_string(content: &Vec<u8>) -> Vec<u8> {
     let mut out = format!("{}:", content.len()).as_bytes().to_vec();
@@ -40,11 +40,11 @@ pub fn byte_string(content: &Vec<u8>) -> Vec<u8> {
 }
 
 /// Encodes list.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `content` - list to encode
-pub fn list(content: &Vec<BVal>) -> Vec<u8> {
+pub fn list(content: &Vec<Val>) -> Vec<u8> {
     let mut out: Vec<u8> = vec![];
 
     out.append(&mut "l".as_bytes().to_vec());
@@ -58,11 +58,11 @@ pub fn list(content: &Vec<BVal>) -> Vec<u8> {
 
 // TODO: Assumes the content is in lexicographical order!
 /// Encodes dictionary.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `content` - dictionary to encode
-pub fn dictionary(content: &BTreeMap<Vec<u8>, BVal>) -> Vec<u8> {
+pub fn dictionary(content: &BTreeMap<Vec<u8>, Val>) -> Vec<u8> {
     let mut out: Vec<u8> = vec![];
 
     out.append(&mut "d".as_bytes().to_vec());
