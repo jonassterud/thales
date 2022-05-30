@@ -5,3 +5,4 @@ mod val;
 
 pub use decode::decode;
 pub use encode::encode;
+pub use val::Val;
