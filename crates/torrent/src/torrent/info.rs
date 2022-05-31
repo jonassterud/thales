@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 
 /// Represents a file, both in single-file mode and multi-file mode.
+#[derive(Debug)]
 pub struct File {
     /// Length of the file in bytes
     pub length: i64,
@@ -10,6 +11,7 @@ pub struct File {
 }
 
 /// Contains info about the torrent.
+#[derive(Debug)]
 pub struct TorrentInfo {
     /// The filename in single-file mode, or the directory name in multi-file mode
     pub name: Vec<u8>,

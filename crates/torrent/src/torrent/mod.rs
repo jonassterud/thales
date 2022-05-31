@@ -8,13 +8,14 @@ use std::path::PathBuf;
 use anyhow::anyhow;
 
 /// Torrent struct.
+#[derive(Debug)]
 pub struct Torrent {
     /// Info about the torrent
     pub info: TorrentInfo,
     /// Announce URL of the tracker
     pub announce: Vec<u8>,
     /// Creation time of torrent, in standard UNIX epoch format
-    pub creation_date: Vec<u8>,
+    pub creation_date: i64,
     /// Comment from the author
     pub comment: Vec<u8>,
     /// Name and version of the program used to create the torrent
@@ -25,13 +26,17 @@ pub struct Torrent {
 impl Torrent {
     pub fn from_file(path: &Path) -> Result<Torrent> {
         let content = std::fs::read(path)?;
+        Torrent::from_bytes(&content)
+    }
+
+    pub fn from_bytes(content: &[u8]) -> Result<Torrent> {
         let decoded = decode(&content);
-        
+
         // TODO: Refactor!
         if let Val::Dictionary(dict) = decoded {
             // Get Torrent values
             let announce = dict.get(b"announce".as_ref()).unwrap().as_byte_string()?;
-            let creation_date = dict.get(b"creation date".as_ref()).unwrap_or(&Val::ByteString(vec![])).as_byte_string()?;
+            let creation_date = dict.get(b"creation date".as_ref()).unwrap_or(&Val::ByteString(vec![])).as_number()?;
             let comment = dict.get(b"comment".as_ref()).unwrap_or(&Val::ByteString(vec![])).as_byte_string()?;
             let created_by = dict.get(b"created by".as_ref()).unwrap_or(&Val::ByteString(vec![])).as_byte_string()?;
         
