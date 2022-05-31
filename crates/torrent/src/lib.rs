@@ -1,4 +1,4 @@
-mod torrent;
 mod tests;
+mod torrent;
 
-pub use crate::torrent::{Torrent, TorrentInfo, File};
+pub use crate::torrent::{File, Torrent, TorrentInfo};

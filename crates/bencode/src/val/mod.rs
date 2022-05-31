@@ -1,5 +1,5 @@
-use std::collections::BTreeMap;
 use anyhow::{anyhow, Result};
+use std::collections::BTreeMap;
 
 /// Enum to represent Bencoded data values.
 #[derive(Debug, PartialEq, Clone)]

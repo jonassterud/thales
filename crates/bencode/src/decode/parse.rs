@@ -2,158 +2,135 @@ use super::Val;
 use std::collections::BTreeMap;
 use std::iter::Peekable;
 use std::slice::Iter;
+use anyhow::{anyhow, Result};
 
 /// Figures out what the bencoded data is, and calls the appropriate decode function.
 ///
 /// # Arguments
 ///
 /// * `content` - data to decode
-pub fn any(content: &mut Peekable<Iter<u8>>) -> Option<Val> {
-    while let Some(byte) = content.peek() {
+pub fn any(content: &mut Peekable<Iter<u8>>) -> Result<Val> {
+    // Call appropiate parser function based on the first byte
+    if let Some(byte) = content.peek() {
         match byte {
-            105 => return Some(integer(content)),
-            48..=57 => return Some(byte_string(content)),
-            108 => return Some(list(content)),
-            100 => return Some(dictionary(content)),
-            _ => {}
+            105 => integer(content),
+            48..=57 => byte_string(content),
+            108 => list(content),
+            100 => dictionary(content),
+            _ => Err(anyhow!("unexpected data in content (any): {}", **byte as char))
         }
+    } else {
+        Err(anyhow!("content is empty"))
     }
-
-    None
 }
 
 /// Decode bencoded integer.
+/// An integer is bencoded like this: `i<integer>e`.
 ///
 /// # Arguments
 ///
 /// * `content` - data to decode
-pub fn integer(content: &mut Peekable<Iter<u8>>) -> Val {
-    if **content.peek().unwrap() != 105 {
-        panic!("missing 'i'");
-    } else {
-        content.next();
+pub fn integer(content: &mut Peekable<Iter<u8>>) -> Result<Val> {
+    if content.next().unwrap() != &105 {
+        return Err(anyhow!("missing 'i' to mark start of integer"));
     }
 
-    let mut int_temp: Vec<char> = vec![];
-    let int: i64;
-
-    while let Some(byte) = content.peek() {
+    let mut buffer: Vec<char> = vec![];
+    while let Some(byte) = content.next() {
         match byte {
             45 /* - */ => {
-                if int_temp.len() != 0 {
-                    panic!("unexpected byte");
+                if !buffer.is_empty() {
+                    return Err(anyhow!("unexpected '-', only allowed at start of integer"));
+                } else {
+                    buffer.push(*byte as char);
                 }
-
-                int_temp.push(*content.next().unwrap() as char);
             },
-            48..=57 /* 0-9 */ => {
-                int_temp.push(*content.next().unwrap() as char);
-            },
-            101 /* e */ => {
-                content.next();
-                break;
-            },
-            _ => panic!("unexpected byte"),
+            48..=57 /* 0-9 */ => buffer.push(*byte as char),
+            101 /* e */ => break,
+            _ => return Err(anyhow!("unexpected data in content (integer): {}", *byte as char)),
         }
     }
 
-    int = int_temp
-        .iter()
-        .collect::<String>()
-        .parse::<i64>()
-        .unwrap();
+    let out = buffer.iter().collect::<String>().parse::<i64>()?;
 
-    Val::Number(int)
+    Ok(Val::Number(out))
 }
 
 /// Decode bencoded byte string.
+/// A byte string is bencoded like this: `<length_in_bytes>:<bytes>`.
 ///
 /// # Arguments
 ///
 /// * `content` - data to decode
-pub fn byte_string(content: &mut Peekable<Iter<u8>>) -> Val {
-    let mut bs_len_temp: Vec<char> = vec![];
-    let mut bs_len: i64 = 0;
-    let mut bs: Vec<u8> = vec![];
+pub fn byte_string(content: &mut Peekable<Iter<u8>>) -> Result<Val> {
+    let mut len_buffer: Vec<char> = vec![];
 
-    while let Some(byte) = content.peek() {
+    while let Some(byte) = content.next() {
         match byte {
-            48..=57 /* 0-9 */ => {
-                bs_len_temp.push(*content.next().unwrap() as char);
-            },
+            48..=57 /* 0-9 */ => len_buffer.push(*byte as char),
             58 /* : */ => {
-                content.next();
-                bs_len = bs_len_temp.iter().collect::<String>().parse::<i64>().unwrap();
-                break;
+                let len = len_buffer.iter().collect::<String>().parse::<i64>()?;
+                let mut out: Vec<u8> = vec![];
+
+                for _ in 0..len {
+                    out.push(*content.next().unwrap());
+                }
+            
+                return Ok(Val::ByteString(out))
             },
-            _ => panic!("unexpected byte"),
+            _ => return Err(anyhow!("unexpected data in content (byte string): {}", *byte as char)),
         };
     }
 
-    for _ in 0..bs_len {
-        bs.push(*content.next().unwrap());
-    }
-
-    Val::ByteString(bs)
+    Err(anyhow!("no data in content"))
 }
 
 /// Decode bencoded list.
+/// A list is bencoded like this: `l<content>e`.
 ///
 /// # Arguments
 ///
 /// * `content` - data to decode
-pub fn list(content: &mut Peekable<Iter<u8>>) -> Val {
-    let mut list: Vec<Val> = vec![];
-
-    if **content.peek().unwrap() != 108
-    /* l */
-    {
-        panic!("missing 'l'");
-    } else {
-        content.next();
+pub fn list(content: &mut Peekable<Iter<u8>>) -> Result<Val> {
+    if content.next().unwrap() != &108 /* l */ {
+        return Err(anyhow!("missing 'l' to mark start of list"));
     }
 
-    while **content.peek().unwrap() != 101
-    /* e */
-    {
-        list.push(any(content).unwrap());
+    let mut out: Vec<Val> = vec![];
+
+    while **content.peek().unwrap() != 101 /* e */ {
+        out.push(any(content)?);
     }
 
+    // Skip 'e'
     content.next();
 
-    Val::List(list)
+    Ok(Val::List(out))
 }
 
 /// Decode bencoded dictionary.
+/// A dictionary is encoded like this: `d<key_as_byte_string><value>(etc)e`.
 ///
 /// # Arguments
 ///
 /// * `content` - data to decode
-pub fn dictionary(content: &mut Peekable<Iter<u8>>) -> Val {
-    let mut dict: BTreeMap<Vec<u8>, Val> = BTreeMap::new();
-
-    if **content.peek().unwrap() != 100
-    /* d */
-    {
-        panic!("missing 'd'");
-    } else {
-        content.next();
+pub fn dictionary(content: &mut Peekable<Iter<u8>>) -> Result<Val> {
+    if content.next().unwrap() != &100 {
+        return Err(anyhow!("missing 'd' to mark start of dictionary"));
     }
 
-    while **content.peek().unwrap() != 101
-    /* e */
-    {
-        let key_temp = any(content).unwrap();
+    let mut out: BTreeMap<Vec<u8>, Val> = BTreeMap::new();
 
-        if let Val::ByteString(key) = key_temp {
-            let val = any(content).unwrap();
-            dict.insert(key, val);
+    while **content.peek().unwrap() != 101 /* e */ {
+        if let Val::ByteString(key) = any(content)? {
+            out.insert(key, any(content)?);
         } else {
-            panic!("key is not a byte string")
+            return Err(anyhow!("key in dictionary is not a byte string"));
         }
     }
 
+    // Skip 'e'
     content.next();
 
-    Val::Dictionary(dict)
+    Ok(Val::Dictionary(out))
 }

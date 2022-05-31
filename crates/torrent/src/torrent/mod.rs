@@ -1,11 +1,11 @@
 mod info;
 
-pub use info::{TorrentInfo, File};
-use std::path::Path;
-use anyhow::Result;
-use bencode::{Val, decode};
-use std::path::PathBuf;
 use anyhow::anyhow;
+use anyhow::Result;
+use bencode::{decode, Val};
+pub use info::{File, TorrentInfo};
+use std::path::Path;
+use std::path::PathBuf;
 
 /// Torrent struct.
 #[derive(Debug)]
@@ -30,21 +30,36 @@ impl Torrent {
     }
 
     pub fn from_bytes(content: &[u8]) -> Result<Torrent> {
-        let decoded = decode(&content);
+        let decoded = decode(&content)?;
 
         // TODO: Refactor!
         if let Val::Dictionary(dict) = decoded {
             // Get Torrent values
             let announce = dict.get(b"announce".as_ref()).unwrap().as_byte_string()?;
-            let creation_date = dict.get(b"creation date".as_ref()).unwrap_or(&Val::ByteString(vec![])).as_number()?;
-            let comment = dict.get(b"comment".as_ref()).unwrap_or(&Val::ByteString(vec![])).as_byte_string()?;
-            let created_by = dict.get(b"created by".as_ref()).unwrap_or(&Val::ByteString(vec![])).as_byte_string()?;
-        
+            let creation_date = dict
+                .get(b"creation date".as_ref())
+                .unwrap_or(&Val::ByteString(vec![]))
+                .as_number()?;
+            let comment = dict
+                .get(b"comment".as_ref())
+                .unwrap_or(&Val::ByteString(vec![]))
+                .as_byte_string()?;
+            let created_by = dict
+                .get(b"created by".as_ref())
+                .unwrap_or(&Val::ByteString(vec![]))
+                .as_byte_string()?;
+
             // Get TorrentInfo values
             let info_dict = dict.get(b"info".as_ref()).unwrap().as_dictionary()?;
             let name = info_dict.get(b"name".as_ref()).unwrap().as_byte_string()?;
-            let piece_length = info_dict.get(b"piece length".as_ref()).unwrap().as_number()?;
-            let pieces = info_dict.get(b"pieces".as_ref()).unwrap().as_byte_string()?;
+            let piece_length = info_dict
+                .get(b"piece length".as_ref())
+                .unwrap()
+                .as_number()?;
+            let pieces = info_dict
+                .get(b"pieces".as_ref())
+                .unwrap()
+                .as_byte_string()?;
             let mut files: Vec<File> = vec![];
 
             // Handle both single-file mode and multi-file mode
@@ -55,7 +70,7 @@ impl Torrent {
                     let file_temp = file_temp.as_dictionary()?;
                     let file_length = file_temp.get(b"length".as_ref()).unwrap().as_number()?;
                     let mut file_path = PathBuf::new();
-                    
+
                     // Assemble path from the path list
                     let file_path_list = file_temp.get(b"path".as_ref()).unwrap().as_list()?;
                     for file_path_part in file_path_list {
@@ -88,11 +103,9 @@ impl Torrent {
                 creation_date: creation_date,
                 comment: comment,
                 created_by: created_by,
-            })
+            });
         }
 
         Err(anyhow!("failed parsing torrent"))
     }
-
-
 }

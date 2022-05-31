@@ -26,7 +26,7 @@ pub fn get_comparison_data() -> Vec<(&'static str, Val)> {
 #[test]
 fn decode_bencode() {
     for (d, e) in get_comparison_data() {
-        let left = decode::decode(d.as_bytes());
+        let left = decode::decode(d.as_bytes()).unwrap();
         let right = e;
 
         if left != right {
