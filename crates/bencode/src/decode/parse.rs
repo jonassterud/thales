@@ -61,7 +61,7 @@ pub fn integer(content: &mut Peekable<Iter<u8>>) -> Val {
         .iter()
         .collect::<String>()
         .parse::<i64>()
-        .expect(&format!("{:?}___{:?}", content, int_temp));
+        .unwrap();
 
     Val::Number(int)
 }
@@ -119,6 +119,8 @@ pub fn list(content: &mut Peekable<Iter<u8>>) -> Val {
         list.push(any(content).unwrap());
     }
 
+    content.next();
+
     Val::List(list)
 }
 
@@ -150,6 +152,8 @@ pub fn dictionary(content: &mut Peekable<Iter<u8>>) -> Val {
             panic!("key is not a byte string")
         }
     }
+
+    content.next();
 
     Val::Dictionary(dict)
 }
